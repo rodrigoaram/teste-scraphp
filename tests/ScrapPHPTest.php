@@ -2,10 +2,11 @@
 
 declare(strict_types=1);
 
-use ScraPHP\HttpClient\Page;
 use ScraPHP\ScraPHP;
 use ScraPHP\ProcessPage;
+use ScraPHP\Writers\Writer;
 use Psr\Log\LoggerInterface;
+use ScraPHP\HttpClient\Page;
 use ScraPHP\Writers\JsonWriter;
 use Scraphp\HttpClient\HttpClient;
 use ScraPHP\HttpClient\Guzzle\GuzzlePage;
@@ -14,10 +15,14 @@ use ScraPHP\HttpClient\Guzzle\GuzzleHttpClient;
 
 beforeEach(function () {
     $this->httpClient = Mockery::mock(HttpClient::class);
-    $this->httpClient->shouldReceive('withLogger')->andReturn($this->httpClient);
-
-    $this->scraphp = new ScraPHP();
-    $this->scraphp->withHttpClient($this->httpClient);
+    $this->logger = Mockery::mock(LoggerInterface::class);
+    $this->writer = Mockery::mock(Writer::class);
+    
+    $this->scraphp = new ScraPHP(
+        httpClient: $this->httpClient,
+        logger: $this->logger,
+        writer: $this->writer,
+    );
 });
 
 afterEach(function () {
@@ -75,10 +80,6 @@ test('bind the context if the callback is a closure', function () {
 
 });
 
-test('default http client should be GuzzleHttpClient', function () {
-    $scraphp = new ScraPHP();
-    expect($scraphp->httpClient())->toBeInstanceOf(GuzzleHttpClient::class);
-});
 
 test('call fetch an asset from httpClient', function () {
 
@@ -119,59 +120,33 @@ test('call save asset with custom filename', function () {
     expect(file_get_contents($file))->toBe('Hello World');
 });
 
-test('log to a file', function () {
-    $scraphp = new ScraPHP([
-        'logger' => ['filename' => __DIR__.'/assets/log.txt'],
-    ]);
-
-    $scraphp->logger()->debug('Teste');
-
-    expect(__DIR__.'/assets/log.txt')->toBeFile();
-    expect(file_get_contents(__DIR__.'/assets/log.txt'))->toContain('Teste');
-
-});
-
-test('inject the logger into the writer', function () {
-
-    $scraphp = new ScraPHP();
-
-    $scraphp->withWriter(new JsonWriter(__DIR__.'/assets/log.txt'));
-
-    expect($scraphp->writer()->logger())->toBeInstanceOf(LoggerInterface::class);
-});
-
-
 test('call class ProcessPage', function () {
 
     $httpClient = Mockery::mock(HttpClient::class);
-    $httpClient->shouldReceive('get')
+    $this-> httpClient->shouldReceive('get')
         ->andReturn(new GuzzlePage(
             content: '<h1>Hello World</h1>',
             statusCode: 200,
             headers: [],
             url: 'https://localhost:8000/teste.html'
         ));
-    $httpClient->shouldReceive('withLogger')->once();
-    $scraphp = new ScraPHP();
-    $scraphp->withHttpClient($httpClient);
-
-
+    
     $pp =  Mockery::mock(ProcessPage::class);
-    $pp->shouldReceive('withScraPHP')->once()->with($scraphp);
+    $pp->shouldReceive('withScraPHP')->once()->with($this->scraphp);
     $pp->shouldReceive('process')->once();
 
-    $scraphp->go('https://localhost:8000/teste.html', $pp);
+    $this->scraphp->go('https://localhost:8000/teste.html', $pp);
 
 });
 
 
 
 test('retry get a url after a failed', function () {
-    $httpClient = Mockery::mock(HttpClient::class);
-    $httpClient
+    
+    $this->httpClient
         ->shouldReceive('get')
         ->times(3)
-        ->andReturnUsing(function () use ($httpClient) {
+        ->andReturnUsing(function (){
             static $counter = 0;
             if($counter < 2) {
                 $counter++;
@@ -185,23 +160,20 @@ test('retry get a url after a failed', function () {
             );
         });
 
-    $httpClient->shouldReceive('withLogger')->once();
-    $scraphp = new ScraPHP(config:[
-        'httpclient' => [
-            'retry_count' => 3,
-            'retry_time' => 1
-        ]
-    ]);
+    $scraphp = new ScraPHP(
+        httpClient: $this->httpClient,
+        logger: $this->logger,
+        writer: $this->writer,
+        retryCount: 3,
+        retryTime: 1
+    );
 
-    $loggerMock = Mockery::mock(LoggerInterface::class);
-    $loggerMock->shouldReceive('error');
-    $loggerMock->shouldReceive('info');
-    $scraphp->withHttpClient($httpClient)->withLogger($loggerMock);
+    $this->logger->shouldReceive('error');
+    $this->logger->shouldReceive('info');
 
     $scraphp->go('http://localhost:8000/teste.html', function (Page $page) {
 
     });
-
 
     expect($scraphp->urlErrors())->toHaveCount(0);
 });
@@ -209,21 +181,24 @@ test('retry get a url after a failed', function () {
 
 
 test('save a failed url and its processor after tried 3 times', function () {
-    $httpClient = Mockery::mock(HttpClient::class);
-    $httpClient->shouldReceive('get')->times(3)->andThrows(new HttpClientException('test'));
+    
+    $this->httpClient
+        ->shouldReceive('get')
+        ->times(3)
+        ->andThrows(new HttpClientException('test'));
 
-    $httpClient->shouldReceive('withLogger')->once();
-    $scraphp = new ScraPHP(config:[
-        'httpclient' => [
-            'retry_count' => 3,
-            'retry_time' => 1
-        ]
-    ]);
+    
+    $scraphp = new ScraPHP(
+        httpClient: $this->httpClient,
+        logger: $this->logger,
+        writer: $this->writer,
+        retryCount: 3,
+        retryTime: 1
+    );
 
-    $loggerMock = Mockery::mock(LoggerInterface::class);
-    $loggerMock->shouldReceive('error');
-    $loggerMock->shouldReceive('info');
-    $scraphp->withHttpClient($httpClient)->withLogger($loggerMock);
+    $this->logger->shouldReceive('error');
+    $this->logger->shouldReceive('info');
+
 
     $scraphp->go('http://localhost:8000/teste.html', function (Page $page) {
 
@@ -237,11 +212,10 @@ test('save a failed url and its processor after tried 3 times', function () {
 
 test('retry get an asset if its fail', function () {
 
-    $httpClient = Mockery::mock(HttpClient::class);
-    $httpClient
+    $this->httpClient
         ->shouldReceive('fetchAsset')
         ->times(3)
-        ->andReturnUsing(function () use ($httpClient) {
+        ->andReturnUsing(function () {
             static $counter = 0;
             if($counter < 2) {
                 $counter++;
@@ -250,20 +224,18 @@ test('retry get an asset if its fail', function () {
             return 'ABC';
         });
 
-    $httpClient->shouldReceive('withLogger')->once();
-    $scraphp = new ScraPHP(config:[
-        'httpclient' => [
-            'retry_count' => 3,
-            'retry_time' => 1
-        ]
-    ]);
+    
+    $scraphp = new ScraPHP(
+        httpClient: $this->httpClient,
+        logger: $this->logger,
+        writer: $this->writer,
+        retryCount: 3,
+        retryTime: 1
+    );
 
-    $loggerMock = Mockery::mock(LoggerInterface::class);
-    $loggerMock->shouldReceive('error');
-    $loggerMock->shouldReceive('info');
-    $scraphp->withHttpClient($httpClient)->withLogger($loggerMock);
-
-
+    $this->logger->shouldReceive('error');
+    $this->logger->shouldReceive('info');
+    
     $scraphp->fetchAsset('https://localhost:8000/teste.jpg');
 
     expect($scraphp->assetErrors())->toHaveCount(0);
@@ -273,26 +245,25 @@ test('retry get an asset if its fail', function () {
 
 
 test('save a failed url asset tried 3 times', function () {
-    $httpClient = Mockery::mock(HttpClient::class);
-    $httpClient->shouldReceive('fetchAsset')
+    
+    $this->httpClient
+        ->shouldReceive('fetchAsset')
         ->times(3)
         ->andThrows(new HttpClientException('test'));
 
-    $httpClient->shouldReceive('withLogger')->once();
-    $scraphp = new ScraPHP(config:[
-        'httpclient' => [
-            'retry_count' => 3,
-            'retry_time' => 1
-        ]
-    ]);
+    
+    $scraphp = new ScraPHP(
+        httpClient: $this->httpClient,
+        logger: $this->logger,
+        writer: $this->writer,
+        retryCount: 3,
+        retryTime: 1
+    );
 
-    $loggerMock = Mockery::mock(LoggerInterface::class);
-    $loggerMock->shouldReceive('error');
-    $loggerMock->shouldReceive('info');
-    $scraphp->withHttpClient($httpClient)->withLogger($loggerMock);
-
+    $this->logger->shouldReceive('error');
+    $this->logger->shouldReceive('info');
+    
     $scraphp->fetchAsset('http://localhost:8000/teste.jpg');
-
 
     expect($scraphp->assetErrors()[0]['url'])->toContain('http://localhost:8000/teste.jpg');
 
@@ -300,26 +271,26 @@ test('save a failed url asset tried 3 times', function () {
 
 
 test('save a failed url asset tried 3 times on saveAsset', function () {
-    $httpClient = Mockery::mock(HttpClient::class);
-    $httpClient->shouldReceive('fetchAsset')
+    
+    
+    $this->httpClient
+        ->shouldReceive('fetchAsset')
         ->times(3)
         ->andThrows(new HttpClientException('test'));
 
-    $httpClient->shouldReceive('withLogger')->once();
-    $scraphp = new ScraPHP(config:[
-        'httpclient' => [
-            'retry_count' => 3,
-            'retry_time' => 1
-        ]
-    ]);
+    
+    $scraphp = new ScraPHP(
+        httpClient: $this->httpClient,
+        logger: $this->logger,
+        writer: $this->writer,
+        retryCount: 3,
+        retryTime: 1
+    );
 
-    $loggerMock = Mockery::mock(LoggerInterface::class);
-    $loggerMock->shouldReceive('error');
-    $loggerMock->shouldReceive('info');
-    $scraphp->withHttpClient($httpClient)->withLogger($loggerMock);
-
+    $this->logger->shouldReceive('error');
+    $this->logger->shouldReceive('info');
+    
     $scraphp->saveAsset('http://localhost:8000/teste.jpg', 'teste.jpg');
-
 
     expect($scraphp->assetErrors()[0]['url'])->toContain('http://localhost:8000/teste.jpg');
 
