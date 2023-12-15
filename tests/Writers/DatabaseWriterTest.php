@@ -23,12 +23,10 @@ beforeEach(function () {
         $this->pdo,
         'users'
     );
-    $this->writer->withLogger($this->logger);
 });
 
 test('write a record to database', function () {
 
-    $this->logger->shouldReceive('info')->once();
     $this->writer->write([
         'name' => 'Rodrigo',
         'lastname' => 'Aramburu',
@@ -49,7 +47,6 @@ test('write a record to database', function () {
 
 test('check if a record exists in database', function () {
 
-    $this->logger->shouldReceive('info')->times(3);
     $this->writer->write([
         'name' => 'Rodrigo',
         'lastname' => 'Aramburu',
@@ -75,7 +72,6 @@ test('check if a record exists in database', function () {
 
 test('check if a record exists in database with two criteria', function () {
 
-    $this->logger->shouldReceive('info')->times(3);
     $this->writer->write([
         'name' => 'Rodrigo',
         'lastname' => 'Aramburu',

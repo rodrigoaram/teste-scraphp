@@ -71,7 +71,7 @@ final class ScraPHP
                 $callback->withScraPHP($this);
                 $callback->process($page);
             }
-        } catch(HttpClientException $e) {
+        } catch(HttpClientException|UrlNotFoundException $e) {
             $this->urlErrors[] = [ 'url' => $url, 'pageProcessor' => $callback];
             $this->logger->error('cant get url: '.$url);
         }
@@ -93,17 +93,21 @@ final class ScraPHP
         $tries = 0;
         while($tries < $this->retryCount) {
             try {
-                return $this->httpClient->get($url);
+                $this->logger->info('Accessing '.$url);
+                $page = $this->httpClient->get($url);
+                $this->logger->info('Status: '.$page->statusCode().' '.$url);
+                return $page;
+            }catch(UrlNotFoundException $e){
+                $this->logger->error('404 NOT FOUND '.$url);
             } catch(HttpClientException $e) {
-                $tries++;
-                $this->logger->error('Error: '.$e->getMessage());
-                if($tries >= $this->retryCount) {
-                    throw $e;
-                }
-                $this->logger->info('Retry in ('.($this->retryTime * $tries).') seconds: '.$url);
-                sleep($this->retryTime * $tries);
+                $this->logger->error('Error: '.$e->getMessage());  
             }
-
+            $tries++;
+            if($tries >= $this->retryCount) {
+                throw $e;
+            }
+            $this->logger->info('Retry in ('.($this->retryTime * $tries).') seconds: '.$url);
+            sleep($this->retryTime * $tries);
         }
     }
    
@@ -170,7 +174,13 @@ final class ScraPHP
         $tries = 0;
         while($tries < $this->retryCount) {
             try {
-                return $this->httpClient->fetchAsset($url);
+                $this->logger->info('Fetching asset: '.$url);
+                $data = $this->httpClient->fetchAsset($url);
+                $this->logger->info('Fetched: ' . $url);
+
+                return $data;
+            }catch(AssetNotFoundException $e) {
+                $this->logger->error('404 NOT FOUND '.$url);
             } catch(HttpClientException $e) {
                 $tries++;
                 $this->logger->error('Error: '.$e->getMessage());

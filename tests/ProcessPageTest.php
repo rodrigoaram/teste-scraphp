@@ -19,18 +19,33 @@ test('bind scraphp methods to instance', function () {
     };
 
     $httpClient = Mockery::mock(HttpClient::class);
+    $logger = Mockery::mock(LoggerInterface::class);
     $scraphp = new ScraPHP(
         httpClient: $httpClient,
-        logger: Mockery::mock(LoggerInterface::class),
+        logger: $logger,
         writer: Mockery::mock(Writer::class),
     );
     
+    $page = Mockery::mock(Page::class);
+    $page
+        ->shouldReceive('statusCode')
+        ->andReturn(200);
     
     $httpClient->shouldReceive('get')
         ->with('http://localhost:8000/hello-world.php')
         ->once()
-        ->andReturn(Mockery::mock(Page::class));
+        ->andReturn($page);
     
+    $logger->shouldReceive('info')
+        ->once()
+        ->with('Accessing http://localhost:8000/hello-world.php');
+
+        
+    $logger->shouldReceive('info')
+        ->once()
+        ->with('Status: 200 http://localhost:8000/hello-world.php');
+
+
 
     $pp->withScraPHP($scraphp);
 

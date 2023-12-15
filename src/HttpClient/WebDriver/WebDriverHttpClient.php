@@ -30,7 +30,6 @@ final class WebDriverHttpClient implements HttpClient
      * @param LoggerInterface $logger The logger instance.
      */
     public function __construct(
-        private LoggerInterface $logger,
         private $webDriverUrl = 'http://localhost:4444'
     )
     {
@@ -42,7 +41,7 @@ final class WebDriverHttpClient implements HttpClient
 
         $this->webDriver = RemoteWebDriver::create($webDriverUrl, $desiredCapabilities);
     
-        $this->assetFetcher = new AssetFetcher($this->logger);
+        $this->assetFetcher = new AssetFetcher();
     }
 
 
@@ -68,8 +67,7 @@ final class WebDriverHttpClient implements HttpClient
      */
     public function get(string $url): Page
     {
-        $this->logger->info('Accessing ' . $url);
-
+        
         try{
             $this->webDriver->get($url);
         }catch(Exception $e){
@@ -79,14 +77,11 @@ final class WebDriverHttpClient implements HttpClient
         try{
             $title = $this->webDriver->findElement(WebDriverBy::cssSelector('h1'))->getText();
             if(str_contains( $title , 'Not Found') ){
-                $this->logger->error('404 NOT FOUND ' . $url);
                 throw new UrlNotFoundException($url);
             }
         }catch(NoSuchElementException $e){
             // ok não é uma página de erro
         }
-
-        $this->logger->info('Status: ' . 200 . ' ' . $url);
 
         return new WebDriverPage(
             webDriver: $this->webDriver,
@@ -106,11 +101,6 @@ final class WebDriverHttpClient implements HttpClient
     public function fetchAsset(string $url): string
     {
        return $this->assetFetcher->fetchAsset($url);
-    }
-
-    public function withLogger(): LoggerInterface
-    {
-        return $this->logger;
     }
 
 }

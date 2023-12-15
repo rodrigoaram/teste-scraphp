@@ -24,13 +24,10 @@ final class GuzzleHttpClient implements HttpClient
      *
      * @param LoggerInterface $logger The logger instance.
      */
-    public function __construct(
-        private LoggerInterface $logger,
-
-    )
+    public function __construct()
     {
         $this->client = new \GuzzleHttp\Client();
-        $this->assetFetcher = new AssetFetcher($this->logger);
+        $this->assetFetcher = new AssetFetcher();
     }
 
     /**
@@ -45,12 +42,9 @@ final class GuzzleHttpClient implements HttpClient
     public function get(string $url): Page
     {
         try {
-            $this->logger->info('Accessing '.$url);
             $response = $this->client->request('GET', $url);
-            $this->logger->info('Status: '.$response->getStatusCode().' '.$url);
         } catch (ClientException $e) {
             if ($e->getCode() === 404) {
-                $this->logger->error('404 NOT FOUND '.$url);
                 throw new UrlNotFoundException($url.' not found');
             }
         } catch(ConnectException $e) {

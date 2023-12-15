@@ -51,6 +51,14 @@ test('go to a page and return the body', function () {
             url: 'https://localhost:8000/teste.html'
         ));
 
+    $this->logger
+        ->shouldReceive('info')
+        ->with('Accessing https://localhost:8000/teste.html');
+
+    $this->logger
+        ->shouldReceive('info')
+        ->with('Status: 200 https://localhost:8000/teste.html');
+
     $this->scraphp->go('https://localhost:8000/teste.html', function (Page $page) {
         expect($page)->toBeInstanceOf(Page::class)
             ->htmlBody()->toBe('<h1>Hello World</h1>')
@@ -74,6 +82,14 @@ test('bind the context if the callback is a closure', function () {
             url: 'https://localhost:8000/teste.html'
         ));
 
+    $this->logger
+        ->shouldReceive('info')
+        ->with('Accessing https://localhost:8000/teste.html');
+
+    $this->logger
+        ->shouldReceive('info')
+        ->with('Status: 200 https://localhost:8000/teste.html');
+
     $this->scraphp->go('https://localhost:8000/teste.html', function (Page $page) {
         expect($this)->toBeInstanceOf(ScraPHP::class);
     });
@@ -83,10 +99,21 @@ test('bind the context if the callback is a closure', function () {
 
 test('call fetch an asset from httpClient', function () {
 
-    $this->httpClient->shouldReceive('fetchAsset')
+    $this->httpClient
+        ->shouldReceive('fetchAsset')
         ->once()
         ->with('https://localhost:8000/texto.txt')
         ->andReturn('Hello World');
+
+    $this->logger
+        ->shouldReceive('info')
+        ->once()
+        ->with('Fetching asset: https://localhost:8000/texto.txt');
+
+    $this->logger
+        ->shouldReceive('info')
+        ->once()
+        ->with('Fetched: https://localhost:8000/texto.txt');
 
     $content = $this->scraphp->fetchAsset('https://localhost:8000/texto.txt');
 
@@ -96,10 +123,21 @@ test('call fetch an asset from httpClient', function () {
 
 test('call save asset with default filename', function () {
 
-    $this->httpClient->shouldReceive('fetchAsset')
+    $this->httpClient
+        ->shouldReceive('fetchAsset')
         ->once()
         ->with('https://localhost:8000/texto.txt')
         ->andReturn('Hello World');
+
+    $this->logger
+        ->shouldReceive('info')
+        ->once()
+        ->with('Fetching asset: https://localhost:8000/texto.txt');
+
+    $this->logger
+        ->shouldReceive('info')
+        ->once()
+        ->with('Fetched: https://localhost:8000/texto.txt');
 
     $file = $this->scraphp->saveAsset('https://localhost:8000/texto.txt', __DIR__.'/assets/');
 
@@ -109,10 +147,21 @@ test('call save asset with default filename', function () {
 
 test('call save asset with custom filename', function () {
 
-    $this->httpClient->shouldReceive('fetchAsset')
+    $this->httpClient
+        ->shouldReceive('fetchAsset')
         ->once()
         ->with('https://localhost:8000/texto.txt')
         ->andReturn('Hello World');
+
+    $this->logger
+        ->shouldReceive('info')
+        ->once()
+        ->with('Fetching asset: https://localhost:8000/texto.txt');
+
+    $this->logger
+        ->shouldReceive('info')
+        ->once()
+        ->with('Fetched: https://localhost:8000/texto.txt');
 
     $file = $this->scraphp->saveAsset('https://localhost:8000/texto.txt', __DIR__.'/assets/', 'my-filename.txt');
 
@@ -122,7 +171,15 @@ test('call save asset with custom filename', function () {
 
 test('call class ProcessPage', function () {
 
-    $httpClient = Mockery::mock(HttpClient::class);
+    $this->logger
+        ->shouldReceive('info')
+        ->with('Accessing https://localhost:8000/teste.html');
+
+    $this->logger
+        ->shouldReceive('info')
+        ->with('Status: 200 https://localhost:8000/teste.html');
+    
+    
     $this-> httpClient->shouldReceive('get')
         ->andReturn(new GuzzlePage(
             content: '<h1>Hello World</h1>',

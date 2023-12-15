@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace ScraPHP\Writers;
 
-final class DatabaseWriter extends Writer
+final class DatabaseWriter implements Writer
 {
     /**
      * Constructs a new instance of the class.
@@ -37,7 +37,6 @@ final class DatabaseWriter extends Writer
         }
 
         $stmt->execute();
-        $this->logger()->info('Saved data: '.json_encode($data));
     }
 
     /**

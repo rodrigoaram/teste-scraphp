@@ -14,9 +14,7 @@ final class AssetFetcher
 
     private \GuzzleHttp\Client $client;
 
-    public function __construct(
-        private LoggerInterface $logger,
-    ){
+    public function __construct(){
         $this->client = new \GuzzleHttp\Client();
     }
     
@@ -31,12 +29,9 @@ final class AssetFetcher
     public function fetchAsset(string $url): string
     {
         try {
-            $this->logger->info('Fetching asset '.$url);
             $response = $this->client->request('GET', $url);
-            $this->logger->info('Status: '.$response->getStatusCode().' '.$url);
         } catch (ClientException $e) {
             if ($e->getCode() === 404) {
-                $this->logger->error('404 NOT FOUND '.$url);
                 throw new AssetNotFoundException($url.' not found');
             }
         } catch(ConnectException $e) {

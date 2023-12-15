@@ -9,6 +9,13 @@ use ScraPHP\Writers\JsonWriter;
 use ScraPHP\HttpClient\HttpClient;
 use ScraPHP\HttpClient\Guzzle\GuzzleHttpClient;
 
+
+afterEach( function(){
+    if(file_exists('out.json')) {
+        unlink('out.json');
+    }
+});
+
 test('create a scraphp instance with attributes', function() {
    
     $scraphp = ScraPHP::build()->create();
@@ -27,7 +34,6 @@ test('create a scraphp instance passing attributes', function() {
     $httpClient = Mockery::mock(HttpClient::class);
     $logger = Mockery::mock(Logger::class);
     $writer = Mockery::mock(Writer::class);
-    $writer->shouldReceive('withLogger')->once();
 
     $scraphp = ScraPHP::build()
         ->withHttpClient($httpClient)

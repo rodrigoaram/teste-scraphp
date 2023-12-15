@@ -108,10 +108,12 @@ final class ScraPHPBuilder
             ? new JsonWriter('out.json') 
             : $this->writer;
             
-        $writer->withLogger($logger);
+        $httpClient = $this->httpClient === null 
+            ? new GuzzleHttpClient() 
+            : $this->httpClient;
         
         return new ScraPHP(
-            httpClient: $this->httpClient === null ? new GuzzleHttpClient($logger) : $this->httpClient,
+            httpClient: $httpClient,
             logger: $logger,   
             writer: $writer,
             retryCount: $this->retryCount,
