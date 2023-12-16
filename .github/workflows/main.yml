@@ -38,6 +38,11 @@ jobs:
       #     chromedriver --url-base=/wd/hub --port=4444 &
       #     sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 & # optional
 
+      - name: Start test servers
+        shell: bash
+        run: |
+          sleep 30 &
+
       - uses: isbang/compose-action@v1.5.1
         with:
           compose-file: "./docker-compose.yml"
