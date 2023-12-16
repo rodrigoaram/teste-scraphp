@@ -30,7 +30,7 @@ jobs:
       - name: Add key chrome 
         shell: bash
         run: |
-          apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4EB27DB2A3B88B8B
+          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4EB27DB2A3B88B8B
 
       - uses: nanasess/setup-chromedriver@v2
       - run: |
