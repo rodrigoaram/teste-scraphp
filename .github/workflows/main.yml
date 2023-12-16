@@ -21,22 +21,30 @@ jobs:
       - name: Download dependencies
         run: composer update --no-interaction --no-progress 
       
-      - name: Start test servers
-        shell: bash
-        run: |
-          cd tests/test-pages
-          php -S 0.0.0.0:8000 &
+      # - name: Start test servers
+      #   shell: bash
+      #   run: |
+      #     cd tests/test-pages
+      #     php -S 0.0.0.0:8000 &
           
-      - name: Add key chrome 
-        shell: bash
-        run: |
-          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4EB27DB2A3B88B8B
+      # - name: Add key chrome 
+      #   shell: bash
+      #   run: |
+      #     sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4EB27DB2A3B88B8B
 
-      - uses: nanasess/setup-chromedriver@v2
-      - run: |
-          export DISPLAY=:99
-          chromedriver --url-base=/wd/hub --port=4444 &
-          sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 & # optional
+      # - uses: nanasess/setup-chromedriver@v2
+      # - run: |
+      #     export DISPLAY=:99
+      #     chromedriver --url-base=/wd/hub --port=4444 &
+      #     sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 & # optional
+
+      - uses: isbang/compose-action@v1.5.1
+        with:
+          compose-file: "./tests/docker/docker-compose.yml"
+          down-flags: "--volumes"
+          services: |
+            php
+            selenium
 
       - name: Run tests
         run: ./vendor/bin/pest
